@@ -1,22 +1,1058 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="styles.css" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus App</title>
-        <script type="module" src="/main.js" defer></script>
-    </head>
-
-    <body>
-        <main class="container">
-            <h1>Welcome to PakePlus</h1>
-
-            <form class="row" id="greet-form">
-                <input id="greet-input" placeholder="Enter a name..." />
-                <button type="submit">Greet</button>
-            </form>
-            <p id="greet-msg"></p>
-        </main>
-    </body>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>车型选择 - 模式切换</title>
+    
+    <!-- 添加音频元素 -->
+    <audio id="backgroundMusic" loop>
+        <source src="data/background_music.wav" type="audio/wav">
+        您的浏览器不支持音频元素。
+    </audio>
+    
+    <!-- 交互音效 -->
+    <audio id="hoverSound">
+        <source src="data/hover.wav" type="audio/wav">
+    </audio>
+    
+    <audio id="clickSound">
+        <source src="data/click.wav" type="audio/wav">
+    </audio>
+    
+    <audio id="developingSound">
+        <source src="data/developing.wav" type="audio/wav">
+    </audio>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        
+        :root {
+            --primary-color: #77c041;
+            --hover-color: #68b032;
+            --number-bg: #5c7caa;
+            --number-hover: #4a6a98;
+            --status-color: #ff4c4c;
+            --card-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            --card-border: #e0e0e0;
+            --nav-inactive: #888;
+            --nav-active-bg: #f0f7e9;
+        }
+        
+        body {
+            font-family: 'Noto Sans SC', "Microsoft YaHei", sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.07);
+        }
+        
+        .header {
+            margin-bottom: 40px;
+            position: relative;
+            text-align: center;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-color), transparent);
+        }
+        
+        .header h2 {
+            font-size: 42px;
+            margin: 0 0 20px 0;
+            color: var(--primary-color);
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            letter-spacing: 2px;
+        }
+        
+        /* 导航菜单 */
+        .mode-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .mode-tab {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            text-align: center;
+            flex: 1;
+            border: none;
+            background: #f9f9f9;
+            color: var(--nav-inactive);
+        }
+        
+        .mode-tab.active {
+            background-color: var(--nav-active-bg);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        .mode-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+        
+        .mode-tab:hover:not(.active) {
+            background-color: #f1f1f1;
+            color: #555;
+        }
+        
+        /* 内容区域 */
+        .mode-content {
+            display: none;
+        }
+        
+        .mode-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .brand-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .brand-item {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background-color: white;
+        }
+        
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            margin-right: 15px;
+            border-radius: 8px;
+            background-color: #f5f5f5;
+            padding: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .brand-item:hover .brand-logo {
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .brand-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background-color: var(--primary-color);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .brand-item:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+            border-color: var(--primary-color);
+        }
+        
+        .brand-item:hover::before {
+            opacity: 1;
+        }
+        
+        .brand-item:active {
+            transform: translateY(0);
+            box-shadow: var(--card-shadow);
+        }
+        
+        .brand-number {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: var(--number-bg);
+            color: white;
+            font-weight: bold;
+            margin-right: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .brand-number::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+        }
+        
+        .brand-item:hover .brand-number {
+            background-color: var(--number-hover);
+            transform: scale(1.1);
+        }
+        
+        .brand-info {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .brand-name {
+            font-weight: 500;
+            font-size: 17px;
+            transition: color 0.3s ease;
+        }
+        
+        .brand-item:hover .brand-name {
+            color: var(--primary-color);
+        }
+        
+        .development-status {
+            color: var(--status-color);
+            margin-left: 10px;
+            font-size: 14px;
+            position: relative;
+            padding-left: 18px;
+        }
+        
+        .development-status::before {
+            content: '⏳';
+            position: absolute;
+            left: 0;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .brand-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .mode-nav {
+                flex-direction: column;
+            }
+            
+            .mode-tab.active::after {
+                height: 0;
+                width: 0;
+            }
+            
+            .mode-tab.active::before {
+                content: '✓';
+                margin-right: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="images/logo.png" alt="CICO浙江交通集团 IAC急客通" onerror="this.src='/api/placeholder/600/80'; this.alt='CICO & IAC LOGO'">
+    </div>
+    
+    <div class="announcement-board">
+        <div class="announcement-title">公告栏</div>
+        <div class="announcement-content" style="white-space: pre-wrap; text-align: left; word-break: break-word; display: block;">
+目前模拟器的搭建正在初期阶段，车型类别有限，未来将持续更新，增加更多车型并完善功能。
+        更新提示：5月19日新增3种车型（说明：如BYD旗下不同车型但使用相同车机系统的，则不逐一制作模拟器）。
+                        5月20日新增6种车型，欧拉、哈弗猛龙、深蓝、启源、方程豹、长安。
+                        5月31日新增5种车型，银河（E5）、五菱（光S）、BYD（夏）、零跑(C10)、极狐（阿尔法T5）。
+                        5月31日应大家建议，增加车辆图标。
+                        6月3日新增钇为（钇为3）车型。
+        各单位若有急需增加的车型或好的建议，请与我联系。
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="header">
+            <h2>新能源车车机模拟器</h2>
+            
+            <!-- 模式导航 -->
+            <div class="mode-nav">
+                <button class="mode-tab" data-mode="practice">练习模式</button>
+                <button class="mode-tab active" data-mode="teaching">教学模式</button>
+                <button class="mode-tab" data-mode="exam">考试模式</button>
+            </div>
+        </div>
+        
+        <!-- 练习模式内容 -->
+        <div class="mode-content" id="practice-mode">
+            <div class="brand-grid">
+                <a href="lianxi/index.html" class="brand-item">
+                    <div class="brand-number">1</div>
+                    <img src="images/ts-logo.png" alt="腾势" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">腾势(DENZA)</div>
+                    </div>
+                </a>
+                
+                <a href="hwlianxi/index.html" class="brand-item">
+                    <div class="brand-number">2</div>
+                    <img src="images/hw-logo.png" alt="华为问界" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">华为问界(AITO)</div>
+                    </div>
+                </a>
+                
+                <a href="lxlianxi/index.html" class="brand-item">
+                    <div class="brand-number">3</div>
+                    <img src="images/lx-logo.png" alt="理想" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">理想(Li Auto)</div>
+                    </div>
+                </a>
+                
+                <a href="wllianxi/index.html" class="brand-item">
+                    <div class="brand-number">4</div>
+                    <img src="images/wl-logo.png" alt="蔚来" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">蔚来(NIO)</div>
+                    </div>
+                </a>
+                
+                <a href="tsllianxi/index.html" class="brand-item">
+                    <div class="brand-number">5</div>
+                    <img src="images/tsl-logo.png" alt="特斯拉" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">特斯拉(Tesla)</div>
+                    </div>
+                </a>
+                
+                <a href="jklianxi/index.html" class="brand-item">
+                    <div class="brand-number">6</div>
+                    <img src="images/jk-logo.png" alt="极氪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">极氪(ZEEKR)</div>
+                    </div>
+                </a>
+                
+                <a href="xplianxi/index.html" class="brand-item">
+                    <div class="brand-number">7</div>
+                    <img src="images/xp-logo.png" alt="小鹏" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">小鹏(XPENG MOTORS)</div>
+                    </div>
+                </a>
+                
+                <a href="bydslianxi/index.html" class="brand-item">
+                    <div class="brand-number">8</div>
+                    <img src="images/byd-logo.png" alt="比亚迪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">比亚迪(宋)</div>
+                    </div>
+                </a>
+                
+                <a href="bydhblianxi/index.html" class="brand-item">
+                    <div class="brand-number">9</div>
+                    <img src="images/byd-logo.png" alt="比亚迪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">比亚迪(海豹)</div>
+                    </div>
+                </a>
+                
+                <a href="dzidlianxi/index.html" class="brand-item">
+                    <div class="brand-number">10</div>
+                    <img src="images/dz-logo.png" alt="大众" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">大众(ID系列)</div>
+                    </div>
+                </a>
+                
+                <a href="olhmlianxi/index.html" class="brand-item">
+                    <div class="brand-number">11</div>
+                    <img src="images/ol-logo.png" alt="欧拉" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">欧拉(好猫)</div>
+                    </div>
+                </a>
+                
+                <a href="cauni-zlianxi/index.html" class="brand-item">
+                    <div class="brand-number">12</div>
+                    <img src="images/ca-logo.png" alt="长安" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">长安(UNI-Z)</div>
+                    </div>
+                </a>
+                
+                <a href="sls09lianxi/index.html" class="brand-item">
+                    <div class="brand-number">13</div>
+                    <img src="images/sl-logo.png" alt="深蓝" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">深蓝(S09)</div>
+                    </div>
+                </a>
+                
+                <a href="hfmllianxi/index.html" class="brand-item">
+                    <div class="brand-number">14</div>
+                    <img src="images/hf-logo.png" alt="哈弗" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">哈弗(猛龙)</div>
+                    </div>
+                </a>
+                
+                <a href="qyq07lianxi/index.html" class="brand-item">
+                    <div class="brand-number">15</div>
+                    <img src="images/qy-logo.png" alt="起源" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">起源(Q07)</div>
+                    </div>
+                </a>
+                
+                <a href="fcbb8lianxi/index.html" class="brand-item">
+                    <div class="brand-number">16</div>
+                    <img src="images/fcb-logo.png" alt="方程豹" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">方程豹(豹8)</div>
+                    </div>
+                </a>
+                
+                <a href="yhe5lianxi/index.html" class="brand-item">
+                    <div class="brand-number">17</div>
+                    <img src="images/yh-logo.png" alt="银河" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">银河(E5)</div>
+                    </div>
+                </a>
+                
+                <a href="wlgslianxi/index.html" class="brand-item">
+                    <div class="brand-number">18</div>
+                    <img src="images/wlhg-logo.png" alt="五菱" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">五菱(光S)</div>
+                    </div>
+                </a>
+                
+                <a href="bydxlianxi/index.html" class="brand-item">
+                    <div class="brand-number">19</div>
+                    <img src="images/by-logo.png" alt="BYD" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">BYD(夏)</div>
+                    </div>
+                </a>
+                
+                <a href="lpc10lianxi/index.html" class="brand-item">
+                    <div class="brand-number">20</div>
+                    <img src="images/lp-logo.png" alt="零跑" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">零跑(C10)</div>
+                    </div>
+                </a>
+                
+                <a href="jhaeft5lianxi/index.html" class="brand-item">
+                    <div class="brand-number">21</div>
+                    <img src="images/jh-logo.png" alt="极狐" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">极狐(阿尔法T5)</div>
+                    </div>
+                </a>
+                
+                <a href="yw3lianxi/index.html" class="brand-item">
+                    <div class="brand-number">22</div>
+                    <img src="images/yw-logo.png" alt="钇为" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">钇为(钇为3)</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        
+        <!-- 教学模式内容 -->
+        <div class="mode-content active" id="teaching-mode">
+            <div class="brand-grid">
+                <a href="jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">1</div>
+                    <img src="images/ts-logo.png" alt="腾势" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">腾势(DENZA)</div>
+                    </div>
+                </a>
+                
+                <a href="hwjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">2</div>
+                    <img src="images/hw-logo.png" alt="华为问界" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">华为问界(AITO)</div>
+                    </div>
+                </a>
+                
+                <a href="lxjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">3</div>
+                    <img src="images/lx-logo.png" alt="理想" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">理想(Li Auto)</div>
+                    </div>
+                </a>
+                
+                <a href="wljiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">4</div>
+                    <img src="images/wl-logo.png" alt="蔚来" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">蔚来(NIO)</div>
+                    </div>
+                </a>
+                
+                <a href="tsljiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">5</div>
+                    <img src="images/tsl-logo.png" alt="特斯拉" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">特斯拉(Tesla)</div>
+                    </div>
+                </a>
+                
+                <a href="jkjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">6</div>
+                    <img src="images/jk-logo.png" alt="极氪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">极氪(ZEEKR)</div>
+                    </div>
+                </a>
+                
+                <a href="xpjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">7</div>
+                    <img src="images/xp-logo.png" alt="小鹏" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">小鹏(XPENG MOTORS)</div>
+                    </div>
+                </a>
+                
+                <a href="bydsjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">8</div>
+                    <img src="images/byd-logo.png" alt="比亚迪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">比亚迪(宋)</div>
+                    </div>
+                </a>
+                
+                <a href="bydhbjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">9</div>
+                    <img src="images/byd-logo.png" alt="比亚迪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">比亚迪(海豹)</div>
+                    </div>
+                </a>
+                
+                <a href="dzidjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">10</div>
+                    <img src="images/dz-logo.png" alt="大众" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">大众(ID系列)</div>
+                    </div>
+                </a>
+                
+                <a href="olhmjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">11</div>
+                    <img src="images/ol-logo.png" alt="欧拉" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">欧拉(好猫)</div>
+                    </div>
+                </a>
+                
+                <a href="cauni-zjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">12</div>
+                    <img src="images/ca-logo.png" alt="长安" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">长安(UNI-Z)</div>
+                    </div>
+                </a>
+                
+                <a href="sls09jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">13</div>
+                    <img src="images/sl-logo.png" alt="深蓝" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">深蓝(S09)</div>
+                    </div>
+                </a>
+                
+                <a href="hfmljiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">14</div>
+                    <img src="images/hf-logo.png" alt="哈弗" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">哈弗(猛龙)</div>
+                    </div>
+                </a>
+                
+                <a href="qyq07jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">15</div>
+                    <img src="images/qy-logo.png" alt="起源" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">起源(Q07)</div>
+                    </div>
+                </a>
+                
+                <a href="fcbb8jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">16</div>
+                    <img src="images/fcb-logo.png" alt="方程豹" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">方程豹(豹8)</div>
+                    </div>
+                </a>
+                
+                <a href="yhe5jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">17</div>
+                    <img src="images/yh-logo.png" alt="银河" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">银河(E5)</div>
+                    </div>
+                </a>
+                
+                <a href="wlgsjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">18</div>
+                    <img src="images/wlhg-logo.png" alt="五菱" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">五菱(光S)</div>
+                    </div>
+                </a>
+                
+                <a href="bydxjiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">19</div>
+                    <img src="images/by-logo.png" alt="BYD" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">BYD(夏)</div>
+                    </div>
+                </a>
+                
+                <a href="lpc10jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">20</div>
+                    <img src="images/lp-logo.png" alt="零跑" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">零跑(C10)</div>
+                    </div>
+                </a>
+                
+                <a href="jhaeft5jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">21</div>
+                    <img src="images/jh-logo.png" alt="极狐" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">极狐(阿尔法T5)</div>
+                    </div>                
+                </a>
+                
+                <a href="yw3jiaoxue/index.html" class="brand-item">
+                    <div class="brand-number">22</div>
+                    <img src="images/yw-logo.png" alt="钇为" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">钇为(钇为3)</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+        
+        <!-- 考试模式内容 -->
+        <div class="mode-content" id="exam-mode">
+            <div class="brand-grid">
+                <a href="kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">1</div>
+                    <img src="images/ts-logo.png" alt="腾势" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">腾势(DENZA)</div>
+                    </div>
+                </a>
+                
+                <a href="hwkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">2</div>
+                    <img src="images/hw-logo.png" alt="华为问界" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">华为问界(AITO)</div>
+                    </div>
+                </a>
+                
+                <a href="lxkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">3</div>
+                    <img src="images/lx-logo.png" alt="理想" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">理想(Li Auto)</div>
+                    </div>
+                </a>
+                
+                <a href="wlkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">4</div>
+                    <img src="images/wl-logo.png" alt="蔚来" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">蔚来(NIO)</div>
+                    </div>
+                </a>
+                
+                <a href="tslkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">5</div>
+                    <img src="images/tsl-logo.png" alt="特斯拉" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">特斯拉(Tesla)</div>
+                    </div>
+                </a>
+                
+                <a href="jkkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">6</div>
+                    <img src="images/jk-logo.png" alt="极氪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">极氪(ZEEKR)</div>
+                    </div>
+                </a>
+                
+                <a href="xpkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">7</div>
+                    <img src="images/xp-logo.png" alt="小鹏" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">小鹏(XPENG MOTORS)</div>
+                    </div>
+                </a>
+                
+                <a href="bydskaoshi/index.html" class="brand-item">
+                    <div class="brand-number">8</div>
+                    <img src="images/byd-logo.png" alt="比亚迪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">比亚迪(宋)</div>
+                    </div>
+                </a>
+                
+                <a href="bydhbkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">9</div>
+                    <img src="images/byd-logo.png" alt="比亚迪" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">比亚迪(海豹)</div>
+                    </div>
+                </a>
+                
+                <a href="dzidkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">10</div>
+                    <img src="images/dz-logo.png" alt="大众" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">大众(ID系列)</div>
+                    </div>
+                </a>
+                
+                <a href="olhmkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">11</div>
+                    <img src="images/ol-logo.png" alt="欧拉" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">欧拉(好猫)</div>
+                    </div>
+                </a>
+                
+                <a href="cauni-zkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">12</div>
+                    <img src="images/ca-logo.png" alt="长安" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">长安(UNI-Z)</div>
+                    </div>
+                </a>
+                
+                <a href="sls09kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">13</div>
+                    <img src="images/sl-logo.png" alt="深蓝" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">深蓝(S09)</div>
+                    </div>
+                </a>
+                
+                <a href="hfmlkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">14</div>
+                    <img src="images/hf-logo.png" alt="哈弗" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">哈弗(猛龙)</div>
+                    </div>
+                </a>
+                
+                <a href="qyq07kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">15</div>
+                    <img src="images/qy-logo.png" alt="起源" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">起源(Q07)</div>
+                    </div>
+                </a>
+                
+                <a href="fcbb8kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">16</div>
+                    <img src="images/fcb-logo.png" alt="方程豹" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">方程豹(豹8)</div>
+                    </div>
+                </a>
+                
+                <a href="yhe5kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">17</div>
+                    <img src="images/yh-logo.png" alt="银河" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">银河(E5)</div>
+                    </div>
+                </a>
+                
+                <a href="wlgskaoshi/index.html" class="brand-item">
+                    <div class="brand-number">18</div>
+                    <img src="images/wlhg-logo.png" alt="五菱" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">五菱(光S)</div>
+                    </div>
+                </a>
+                
+                <a href="bydxkaoshi/index.html" class="brand-item">
+                    <div class="brand-number">19</div>
+                    <img src="images/by-logo.png" alt="BYD" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">BYD(夏)</div>
+                    </div>
+                </a>
+                
+                <a href="lpc10kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">20</div>
+                    <img src="images/lp-logo.png" alt="零跑" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">零跑(C10)</div>
+                    </div>
+                </a>
+                
+                <a href="jhaeft5kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">21</div>
+                    <img src="images/jh-logo.png" alt="极狐" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">极狐(阿尔法T5)</div>
+                    </div>
+                </a>
+                
+                <a href="yw3kaoshi/index.html" class="brand-item">
+                    <div class="brand-number">22</div>
+                    <img src="images/yw-logo.png" alt="钇为" class="brand-logo" onerror="this.style.display='none'">
+                    <div class="brand-info">
+                        <div class="brand-name">钇为(钇为3)</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 音频控制
+        const backgroundMusic = document.getElementById('backgroundMusic');
+        const hoverSound = document.getElementById('hoverSound');
+        const clickSound = document.getElementById('clickSound');
+        const developingSound = document.getElementById('developingSound');
+        
+        // 设置音乐为默认开启状态
+        let isMusicPlaying = true;
+        
+        // 页面加载后自动播放背景音乐
+        window.addEventListener('load', function() {
+            // 尝试播放背景音乐
+            backgroundMusic.play().catch(e => {
+                // 处理可能的自动播放限制
+                console.log("背景音乐自动播放失败，需要用户交互才能播放:", e);
+                isMusicPlaying = false;
+            });
+        });
+        
+        // 确保用户与页面交互后开始播放音频
+        document.addEventListener('click', function() {
+            if (!isMusicPlaying) {
+                backgroundMusic.play().catch(e => {
+                    console.log("背景音乐播放失败:", e);
+                });
+                isMusicPlaying = true;
+            }
+        }, { once: true });
+        
+        // 模式切换功能
+        const modeTabs = document.querySelectorAll('.mode-tab');
+        const modeContents = document.querySelectorAll('.mode-content');
+        
+        modeTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 添加切换音效
+                clickSound.currentTime = 0;
+                clickSound.play().catch(e => console.log("播放切换音效失败:", e));
+                
+                // 移除所有active类
+                modeTabs.forEach(t => t.classList.remove('active'));
+                modeContents.forEach(c => c.classList.remove('active'));
+                
+                // 添加active类到当前选中的选项卡
+                this.classList.add('active');
+                
+                // 显示对应的内容
+                const mode = this.getAttribute('data-mode');
+                document.getElementById(`${mode}-mode`).classList.add('active');
+            });
+            
+            // 为标签添加悬停音效
+            tab.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('active')) {
+                    hoverSound.currentTime = 0;
+                    hoverSound.play().catch(e => console.log("播放悬停音效失败:", e));
+                }
+            });
+        });
+        
+        // 为所有模式下的品牌项添加声音和点击效果
+        document.querySelectorAll('.brand-item').forEach(item => {
+            // 添加悬停音效
+            item.addEventListener('mouseenter', function() {
+                hoverSound.currentTime = 0;
+                hoverSound.play().catch(e => console.log("播放悬停音效失败:", e));
+            });
+            
+            // 点击效果
+            item.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.98)';
+            });
+            
+            item.addEventListener('mouseup', function() {
+                this.style.transform = '';
+            });
+            
+            // 根据状态添加不同的交互
+            const status = item.querySelector('.development-status');
+            
+            item.addEventListener('click', function(e) {
+                // 添加点击音效
+                if (!status) {
+                    clickSound.currentTime = 0;
+                    clickSound.play().catch(e => console.log("播放点击音效失败:", e));
+                } else {
+                    developingSound.currentTime = 0;
+                    developingSound.play().catch(e => console.log("播放开发中音效失败:", e));
+                }
+                
+                // 仅对第一个品牌（腾势）有效，其他品牌显示"开发中"提示
+                if (!status) {
+                    // 创建波纹效果
+                    const ripple = document.createElement('span');
+                    ripple.classList.add('ripple');
+                    ripple.style.position = 'absolute';
+                    ripple.style.borderRadius = '50%';
+                    ripple.style.backgroundColor = 'rgba(119, 192, 65, 0.3)';
+                    ripple.style.width = '100px';
+                    ripple.style.height = '100px';
+                    ripple.style.transform = 'scale(0)';
+                    ripple.style.pointerEvents = 'none';
+                    
+                    // 设置波纹位置
+                    const rect = this.getBoundingClientRect();
+                    ripple.style.left = e.clientX - rect.left - 50 + 'px';
+                    ripple.style.top = e.clientY - rect.top - 50 + 'px';
+                    
+                    this.appendChild(ripple);
+                    
+                    // 动画
+                    ripple.animate(
+                        [
+                            { transform: 'scale(0)', opacity: 1 },
+                            { transform: 'scale(4)', opacity: 0 }
+                        ],
+                        {
+                            duration: 800,
+                            easing: 'ease-out'
+                        }
+                    );
+                    
+                    // 移除波纹
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 800);
+                } else {
+                    // 为开发中的品牌添加提示动画
+                    const tooltip = document.createElement('div');
+                    tooltip.textContent = '该品牌功能开发中，即将上线！';
+                    tooltip.style.position = 'absolute';
+                    tooltip.style.backgroundColor = 'rgba(0,0,0,0.7)';
+                    tooltip.style.color = 'white';
+                    tooltip.style.padding = '8px 12px';
+                    tooltip.style.borderRadius = '4px';
+                    tooltip.style.zIndex = '100';
+                    tooltip.style.top = '-40px';
+                    tooltip.style.left = '50%';
+                    tooltip.style.transform = 'translateX(-50%)';
+                    tooltip.style.whiteSpace = 'nowrap';
+                    tooltip.style.fontSize = '14px';
+                    tooltip.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+                    
+                    this.style.position = 'relative';
+                    this.appendChild(tooltip);
+                    
+                    // 动画显示
+                    tooltip.animate(
+                        [
+                            { opacity: 0, transform: 'translate(-50%, 10px)' },
+                            { opacity: 1, transform: 'translate(-50%, 0)' }
+                        ],
+                        {
+                            duration: 300,
+                            easing: 'ease-out'
+                        }
+                    );
+                    
+                    // 移除提示
+                    setTimeout(() => {
+                        tooltip.animate(
+                            [
+                                { opacity: 1, transform: 'translate(-50%, 0)' },
+                                { opacity: 0, transform: 'translate(-50%, -10px)' }
+                            ],
+                            {
+                                duration: 300,
+                                easing: 'ease-in'
+                            }
+                        );
+                        
+                        setTimeout(() => {
+                            tooltip.remove();
+                        }, 300);
+                    }, 2000);
+                }
+            });
+        });
+    </script>
+</body>
 </html>
